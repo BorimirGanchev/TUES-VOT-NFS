@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  nfs-server:
+    image: itsthenetwork/nfs-server-alpine:latest
+    container_name: nfs-server
+    privileged: true
+    volumes:
+      - nfs-data:/data
+    environment:
+      - SHARED_DIRECTORY=/data
+    ports:
+      - "2049:2049"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+    command: start-dev
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+
+  node-app:
+    image: node:18-alpine
+    container_name: node-app
+    build:
+      context: ./app 
+    ports:
+      - "3000:3000" 
+    environment:
+      # - NODE_ENV=development
+      - NFS_MOUNT_PATH=/mnt/nfs
+      # - KEYCLOAK_URL=http://keycloak:8080/auth
+      # - KEYCLOAK_REALM=myrealm
+      # - KEYCLOAK_CLIENT_ID=node-app
+      # - KEYCLOAK_CLIENT_SECRET=your-client-secret
+    depends_on:
+      - nfs-server
+      - keycloak
+    volumes:
+      - nfs-data:/mnt/nfs 
+
+volumes:
+  keycloak-data:
+  nfs-data:
+    driver: local
